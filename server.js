@@ -16,25 +16,43 @@ io.on('connection', (socket) => {
 });
 
 async function startZalo() {
-    const browser = await puppeteer.launch({ 
-        headless: "new", 
-        args: ['--no-sandbox', '--disable-setuid-sandbox'] 
-    });
-    const page = await browser.newPage();
-    await page.goto('https://chat.zalo.me/', { waitUntil: 'networkidle2' });
+    try {
+        console.log('1. Đang khởi động trình duyệt ảo...');
+        const browser = await puppeteer.launch({ 
+            headless: "new", 
+            args: [
+                '--no-sandbox', 
+                '--disable-setuid-sandbox', 
+                '--disable-dev-shm-usage' // Chống lỗi kẹt RAM trên Docker Railway
+            ] 
+        });
+        
+        console.log('2. Đang mở tab mới...');
+        const page = await browser.newPage();
+        
+        console.log('3. Đang truy cập Zalo Web (có thể mất 10-20 giây)...');
+        await page.goto('https://chat.zalo.me/', { waitUntil: 'networkidle2', timeout: 60000 });
+        
+        console.log('4. Truy cập thành công, đang quét tìm mã QR...');
+        setInterval(async () => {
+            try {
+                const qrData = await page.evaluate(() => {
+                    // Mở rộng bộ chọn để đề phòng Zalo đổi class HTML
+                    const qrImg = document.querySelector('.qr-code img, .qrcode img, img[alt="QR code"]');
+                    return qrImg ? qrImg.src : null;
+                });
+                
+                if (qrData) {
+                    io.emit('qr_code', qrData);
+                    io.emit('status', 'Vui lòng quét mã QR để đăng nhập');
+                }
+            } catch (error) {}
+        }, 3000);
 
-    setInterval(async () => {
-        try {
-            const qrData = await page.evaluate(() => {
-                const qrImg = document.querySelector('.qr-code img');
-                return qrImg ? qrImg.src : null;
-            });
-            if (qrData) {
-                io.emit('qr_code', qrData);
-                io.emit('status', 'Vui lòng quét mã QR để đăng nhập');
-            }
-        } catch (error) {}
-    }, 3000);
+    } catch (error) {
+        console.error('LỖI HỆ THỐNG:', error.message);
+        io.emit('status', 'Lỗi: ' + error.message);
+    }
 }
 
 startZalo();
