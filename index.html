@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Zalo Manager</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        body { font-family: Arial; text-align: center; margin-top: 50px; }
+        img { border: 1px solid #ccc; padding: 10px; border-radius: 10px; width: 250px; }
+        h3 { color: blue; }
+    </style>
+</head>
+<body>
+    <h2>Hệ thống Quản lý Zalo</h2>
+    <div id="qr-container"><p>Đang tải mã QR...</p></div>
+    <h3 id="status">Đang chờ máy chủ...</h3>
+
+    <script>
+        const socket = io();
+        socket.on('status', msg => document.getElementById('status').innerText = msg);
+        socket.on('qr_code', qr => {
+            document.getElementById('qr-container').innerHTML = `<img src="${qr}">`;
+        });
+    </script>
+</body>
+</html>
