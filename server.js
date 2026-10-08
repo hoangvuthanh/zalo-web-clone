@@ -17,28 +17,30 @@ io.on('connection', (socket) => {
 
 async function startZalo() {
     try {
-        console.log('1. Đang khởi động trình duyệt ảo...');
+        console.log('--- BẮT ĐẦU CHẠY ZALO ---');
         const browser = await puppeteer.launch({ 
-            headless: "new", 
+            headless: true, 
             args: [
                 '--no-sandbox', 
                 '--disable-setuid-sandbox', 
-                '--disable-dev-shm-usage' // Chống lỗi kẹt RAM trên Docker Railway
+                '--disable-dev-shm-usage',
+                '--disable-gpu',
+                '--single-process',
+                '--no-zygote'
             ] 
         });
+        console.log('1. Đã mở xong trình duyệt ảo');
         
-        console.log('2. Đang mở tab mới...');
         const page = await browser.newPage();
+        console.log('2. Đang vào trang Zalo...');
         
-        console.log('3. Đang truy cập Zalo Web (có thể mất 10-20 giây)...');
-        await page.goto('https://chat.zalo.me/', { waitUntil: 'networkidle2', timeout: 60000 });
-        
-        console.log('4. Truy cập thành công, đang quét tìm mã QR...');
+        await page.goto('https://chat.zalo.me/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        console.log('3. Đã vào Zalo, đang chờ mã QR...');
+
         setInterval(async () => {
             try {
                 const qrData = await page.evaluate(() => {
-                    // Mở rộng bộ chọn để đề phòng Zalo đổi class HTML
-                    const qrImg = document.querySelector('.qr-code img, .qrcode img, img[alt="QR code"]');
+                    const qrImg = document.querySelector('img[alt="QR code"], .qr-code img');
                     return qrImg ? qrImg.src : null;
                 });
                 
@@ -57,5 +59,5 @@ async function startZalo() {
 
 startZalo();
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => console.log(`Server chạy port ${PORT}`));
